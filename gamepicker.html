@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Game Picker">
+<title>Game Picker — @silversco0t</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #0f1117; color: #e8eaf0; font-family: -apple-system, 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  input, button, textarea, select { font-family: inherit; }
+  button { cursor: pointer; }
+  a { color: #60a5fa; }
+
+  #app { display: flex; flex-direction: column; min-height: 100vh; }
+  #header { background: #0f1117; border-bottom: 1px solid #1e2535; padding: 16px 20px 0; padding-top: max(16px, env(safe-area-inset-top)); position: sticky; top: 0; z-index: 10; }
+  #header-top { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  #logo { width: 32px; height: 32px; border-radius: 7px; background: linear-gradient(135deg,#f97316,#ea580c); display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0; }
+  #title { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; }
+  #subtitle { font-size: 11px; color: #4b5563; letter-spacing: 0.4px; text-transform: uppercase; margin-top: 1px; }
+  #header-actions { margin-left: auto; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+  .hdr-btn { background: #1a1f2e; border: 1px solid #2e3650; border-radius: 6px; color: #9ca3af; font-size: 11px; padding: 4px 9px; font-weight: 500; cursor: pointer; }
+  #import-label { background: #1a1f2e; border: 1px solid #2e3650; border-radius: 6px; color: #9ca3af; font-size: 11px; padding: 5px 9px; font-weight: 500; cursor: pointer; }
+  #nav { display: flex; }
+  .nav-btn { flex: 1; padding: 9px 0; background: none; border: none; border-bottom: 2px solid transparent; color: #4b5563; font-size: 13px; font-weight: 400; margin-bottom: -1px; white-space: nowrap; transition: color 0.15s; }
+  .nav-btn.active { color: #f97316; border-bottom-color: #f97316; font-weight: 600; }
+  #content { padding: 20px; max-width: 740px; margin: 0 auto; width: 100%; flex: 1; }
+
+  .view { display: none; }
+  .view.active { display: block; }
+
+  .card { background: #1a1f2e; border-radius: 10px; border: 1px solid #2e3650; padding: 14px 16px; margin-bottom: 14px; }
+  .card-title { font-size: 11px; color: #6b7280; font-weight: 600; text-transform: uppercase; margin-bottom: 12px; }
+  .player-card { background: #1a1f2e; border-radius: 12px; border: 1px solid #2e3650; overflow: hidden; margin-bottom: 14px; }
+  .player-card-header { padding: 12px 14px; border-bottom: 1px solid #2e3650; display: flex; justify-content: space-between; align-items: center; }
+  .player-card-body { padding: 12px 14px; display: flex; flex-direction: column; gap: 7px; }
+  .player-card-ai { margin: 0 14px 14px; background: #0f1117; border-radius: 8px; padding: 12px 14px; }
+  .player-card-stats { margin: 0 14px 14px; background: #0f1117; border-radius: 8px; padding: 10px 14px; display: flex; flex-wrap: wrap; gap: 6px 16px; }
+  .stat-item { font-size: 11px; }
+  .stat-key { color: #4b5563; }
+  .stat-val { color: #e8eaf0; font-weight: 600; }
+  .stat-val-hot { color: #4ade80; font-weight: 600; }
+
+  .player-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: #0f1117; border-radius: 8px; margin-bottom: 6px; border: 1px solid #1e2535; }
+  .player-info { display: flex; align-items: center; gap: 10px; }
+  .player-name { font-weight: 600; font-size: 14px; }
+  .player-meta { font-size: 11px; color: #4b5563; margin-top: 1px; }
+  .remove-btn { background: none; border: none; color: #374151; font-size: 20px; line-height: 1; padding: 4px 8px; cursor: pointer; }
+
+  .avatar { width: 32px; height: 32px; border-radius: 7px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #e8eaf0; letter-spacing: 0.3px; }
+
+  #add-form { display: flex; gap: 8px; flex-wrap: wrap; }
+  .form-input { background: #0f1117; border: 1px solid #2e3650; border-radius: 6px; padding: 8px 10px; color: #e8eaf0; font-size: 13px; outline: none; }
+  .form-input:focus { border-color: #3b82f6; }
+  #input-name { flex: 1; min-width: 140px; }
+  #input-team { width: 68px; }
+  #input-pos { width: 68px; }
+  #form-error { margin-top: 8px; font-size: 12px; color: #f87171; }
+
+  .btn { border: none; border-radius: 7px; color: #fff; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .btn-sm { padding: 6px 10px; font-size: 12px; }
+  .btn-md { padding: 8px 14px; font-size: 13px; }
+  .btn-green { background: #16a34a; }
+  .btn-blue { background: #2563eb; }
+  .btn-purple { background: #7c3aed; }
+  .btn-gray { background: #374151; }
+
+  .game-row { padding: 10px 12px; border-radius: 8px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 8px; border: 1px solid #2e3650; background: #0f1117; transition: background 0.1s; }
+  .game-row.recommended { border-color: #22c55e55; background: #16a34a0e; }
+  .game-row.avoided { border-color: #f8717130; }
+  .game-row.picked { border: 1.5px solid #f97316; background: #f9731612; }
+  .game-index { width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; background: #1e2535; color: #4b5563; }
+  .game-index.rec { background: #16a34a; color: #fff; }
+  .game-index.avoid { background: #2d1b1b; }
+  .game-main { font-size: 13px; font-weight: 600; }
+  .game-sub { font-size: 11px; color: #374151; margin-top: 1px; }
+  .b2b-tag { margin-left: 6px; font-size: 10px; color: #f97316; background: #f9731620; padding: 1px 5px; border-radius: 3px; }
+  .def-good { color: #4ade80; }
+  .def-mid { color: #facc15; }
+  .def-bad { color: #f87171; }
+
+  .status-tag { font-size: 10px; padding: 1px 6px; border-radius: 3px; font-weight: 600; margin-left: 6px; }
+  .status-out { background: #f8717120; color: #f87171; }
+  .status-questionable { background: #facc1520; color: #facc15; }
+  .status-doubtful { background: #f9731620; color: #f97316; }
+
+  .ai-badge { font-size: 11px; background: #7c3aed22; color: #a78bfa; padding: 2px 7px; border-radius: 4px; font-weight: 600; flex-shrink: 0; }
+  .ai-headline { font-size: 12px; color: #c4c9d4; line-height: 1.4; }
+  .ai-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .tag-pro { font-size: 11px; color: #4ade80; background: #16a34a15; padding: 2px 8px; border-radius: 4px; }
+  .tag-con { font-size: 11px; color: #f87171; background: #f8717115; padding: 2px 8px; border-radius: 4px; }
+  .ai-avoid { margin-top: 8px; font-size: 11px; color: #4b5563; }
+  .ai-error { margin: 0 14px 14px; font-size: 12px; color: #f87171; }
+  .proj-range { font-size: 12px; color: #f97316; font-weight: 700; }
+
+  #scoring-grid { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 8px; }
+  .score-item { font-size: 12px; }
+  .score-key { color: #e8eaf0; font-weight: 500; }
+  .score-val-hi { color: #f97316; }
+  .score-val-mid { color: #6b7280; }
+  .score-val-neg { color: #f87171; }
+
+  .hist-table { width: 100%; border-collapse: collapse; }
+  .hist-th { text-align: left; padding: 4px 8px; font-size: 10px; color: #374151; font-weight: 600; text-transform: uppercase; border-bottom: 1px solid #1e2535; }
+  .hist-td { padding: 7px 8px; border-bottom: 1px solid #1a1f2e; }
+  .hist-player { font-size: 13px; font-weight: 500; }
+  .hist-game { font-size: 12px; color: #6b7280; }
+  .hist-proj { font-size: 12px; color: #f97316; font-weight: 600; }
+  .hist-conf-high { font-size: 11px; color: #4ade80; }
+  .hist-conf-mid { font-size: 11px; color: #facc15; }
+  .hist-conf-low { font-size: 11px; color: #6b7280; }
+
+  #week-controls { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .empty { text-align: center; padding: 50px 20px; color: #374151; }
+  .empty-icon { font-size: 28px; margin-bottom: 10px; }
+  .empty-main { font-size: 14px; margin-bottom: 6px; }
+  .empty-sub { font-size: 12px; }
+
+  .loading-bar { background: #1a1f2e; border-radius: 8px; padding: 14px 16px; margin-bottom: 14px; border: 1px solid #2e3650; font-size: 13px; color: #6b7280; display: flex; align-items: center; gap: 10px; }
+  .spinner { width: 16px; height: 16px; border: 2px solid #2e3650; border-top-color: #f97316; border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Modal */
+  .modal { display: none; position: fixed; inset: 0; background: #000000cc; z-index: 100; align-items: center; justify-content: center; padding: 20px; }
+  .modal.open { display: flex; }
+  .modal-box { background: #1a1f2e; border-radius: 12px; border: 1px solid #2e3650; width: 100%; max-width: 480px; padding: 20px; }
+  .modal-box h2 { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+  .modal-box p { font-size: 12px; color: #6b7280; margin-bottom: 14px; line-height: 1.5; }
+  .modal-input { width: 100%; background: #0f1117; border: 1px solid #2e3650; border-radius: 6px; padding: 10px 12px; color: #e8eaf0; font-size: 13px; outline: none; margin-bottom: 10px; }
+  .modal-input:focus { border-color: #3b82f6; }
+  .modal-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .modal-note { font-size: 11px; color: #374151; margin-top: 10px; }
+
+  .data-section { background: #0f1117; border-top: 1px solid #1e2535; padding: 10px 14px; }
+  .data-section-title { font-size: 10px; color: #374151; font-weight: 600; text-transform: uppercase; margin-bottom: 6px; }
+  .form-row { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; font-size: 12px; }
+  .form-label { color: #4b5563; min-width: 80px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="header">
+    <div id="header-top">
+      <div id="logo">🏀</div>
+      <div>
+        <div id="title">Game Picker</div>
+        <div id="subtitle">@SILVERSCOOT · DYNASTY</div>
+      </div>
+      <div id="header-actions">
+        <button class="hdr-btn" onclick="exportData()">⬇ Export</button>
+        <label id="import-label">⬆ Import<input type="file" accept=".json" onchange="importData(event)" style="display:none"></label>
+        <button class="hdr-btn" onclick="openModal('keys-modal')">🔑 Keys</button>
+      </div>
+    </div>
+    <div id="nav">
+      <button class="nav-btn active" data-view="roster" onclick="switchView('roster')">Roster (<span id="roster-count">0</span>/10)</button>
+      <button class="nav-btn" data-view="weekly" onclick="switchView('weekly')">This Week</button>
+      <button class="nav-btn" data-view="history" onclick="switchView('history')">History</button>
+    </div>
+  </div>
+
+  <div id="content">
+
+    <!-- ROSTER -->
+    <div id="view-roster" class="view active">
+      <div class="card">
+        <div class="card-title">Add Player</div>
+        <div id="add-form">
+          <input id="input-name" class="form-input" placeholder="Player name" onkeydown="if(event.key==='Enter')addPlayer()">
+          <input id="input-team" class="form-input" placeholder="Team" maxlength="3" onkeydown="if(event.key==='Enter')addPlayer()" style="width:68px">
+          <input id="input-pos" class="form-input" placeholder="PG/C…" onkeydown="if(event.key==='Enter')addPlayer()" style="width:68px">
+          <button class="btn btn-md btn-green" onclick="addPlayer()">Add</button>
+        </div>
+        <div id="form-error"></div>
+      </div>
+      <div id="player-list"></div>
+      <div class="card" style="margin-top:4px">
+        <div class="card-title">Scoring System</div>
+        <div id="scoring-grid"></div>
+      </div>
+    </div>
+
+    <!-- THIS WEEK -->
+    <div id="view-weekly" class="view">
+      <div id="week-controls">
+        <button class="btn btn-md btn-blue" onclick="loadWeek()">🔄 Load This Week</button>
+        <button id="btn-analyse-all" class="btn btn-md btn-purple" onclick="analyseAll()" style="display:none">🤖 Analyse All</button>
+        <button id="btn-archive" class="btn btn-md btn-green" onclick="archiveWeek()" style="display:none">💾 Archive Week</button>
+      </div>
+      <div id="week-status"></div>
+      <div id="player-week-list"></div>
+    </div>
+
+    <!-- HISTORY -->
+    <div id="view-history" class="view">
+      <div id="history-empty" class="empty">
+        <div class="empty-icon">📋</div>
+        <div class="empty-main">No archived weeks yet</div>
+        <div class="empty-sub">Lock picks and hit Archive Week</div>
+      </div>
+      <div id="history-list"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- KEYS MODAL -->
+<div id="keys-modal" class="modal">
+  <div class="modal-box">
+    <h2>🔑 API Keys</h2>
+    <p>Both keys are stored only in your browser and never shared with anyone except the respective services.</p>
+    <div style="margin-bottom:10px">
+      <div style="font-size:12px;color:#6b7280;margin-bottom:6px">Anthropic API Key (for 🤖 AI analysis)</div>
+      <input id="anthropic-key-input" class="modal-input" type="password" placeholder="sk-ant-…">
+    </div>
+    <div style="margin-bottom:14px">
+      <div style="font-size:12px;color:#6b7280;margin-bottom:6px">BallDontLie API Key (for live NBA data)</div>
+      <input id="bdl-key-input" class="modal-input" type="password" placeholder="your-bdl-key…">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-md btn-blue" onclick="saveKeys()">Save Keys</button>
+      <button class="btn btn-md btn-gray" onclick="closeModal('keys-modal')">Cancel</button>
+      <button class="btn btn-md" style="background:#7f1d1d" onclick="clearKeys()">Clear All</button>
+    </div>
+    <div class="modal-note">
+      Anthropic key: <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a> → API Keys<br>
+      BallDontLie key: <a href="https://www.balldontlie.io" target="_blank">balldontlie.io</a> → Sign Up → Free tier
+    </div>
+  </div>
+</div>
+
+<script>
+// ── CONSTANTS ─────────────────────────────────────────────────────────────────
+const SCORING_DESC = `PTS=0.5, REB=1, AST=1, STL=2, BLK=2, TO=-1, DD=+1, TD=+3, Tech=-1, Flagrant=-1, 3PM=0.5. Milestone bonuses: 40+pts +2, 50+pts +3, 15+ast +2, 20+reb +2. STL and BLK are worth 4x a typical scoring system — prioritise multi-cat players with DD/TD upside.`;
+const SCORING_DISPLAY = [["PTS",0.5],["REB",1],["AST",1],["STL",2],["BLK",2],["TO",-1],["DD",1],["TD",3],["3PM",0.5],["Tech",-1]];
+const SEASON = 2025; // 2025-26 season
+
+// Team abbreviation → BallDontLie team ID mapping
+const TEAM_IDS = {
+  ATL:1,BOS:2,NOP:3,CHI:4,CLE:5,DAL:6,DEN:7,GSW:8,HOU:9,IND:10,
+  LAC:11,LAL:12,MIA:13,MIL:14,MIN:15,BKN:16,NYK:17,ORL:18,PHI:19,PHX:20,
+  POR:21,SAC:22,SAS:23,OKC:24,TOR:25,UTA:26,MEM:27,WAS:28,DET:29,CHA:30
+};
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let state = {
+  players: [],
+  weekGames: {},
+  playerStats: {},
+  playerStatus: {},
+  picks: {},
+  history: [],
+  aiAnalysis: {},
+  aiLoading: {},
+  weekLoading: false
+};
+
+// ── STORAGE ───────────────────────────────────────────────────────────────────
+function loadState() {
+  try {
+    const v = localStorage.getItem('gp_v3');
+    if (v) {
+      const d = JSON.parse(v);
+      state.players = d.players || [];
+      state.weekGames = d.weekGames || {};
+      state.playerStats = d.playerStats || {};
+      state.playerStatus = d.playerStatus || {};
+      state.picks = d.picks || {};
+      state.history = d.history || [];
+    }
+  } catch(e) {}
+}
+
+function saveState() {
+  try {
+    localStorage.setItem('gp_v3', JSON.stringify({
+      players: state.players,
+      weekGames: state.weekGames,
+      playerStats: state.playerStats,
+      playerStatus: state.playerStatus,
+      picks: state.picks,
+      history: state.history
+    }));
+  } catch(e) {}
+}
+
+// ── KEYS ──────────────────────────────────────────────────────────────────────
+function getAnthropicKey() { return localStorage.getItem('gp_anthropic') || ''; }
+function getBdlKey() { return localStorage.getItem('gp_bdl') || ''; }
+
+function saveKeys() {
+  const ak = document.getElementById('anthropic-key-input').value.trim();
+  const bk = document.getElementById('bdl-key-input').value.trim();
+  if (ak && !ak.startsWith('•')) localStorage.setItem('gp_anthropic', ak);
+  if (bk && !bk.startsWith('•')) localStorage.setItem('gp_bdl', bk);
+  closeModal('keys-modal');
+  alert('Keys saved!');
+}
+
+function clearKeys() {
+  localStorage.removeItem('gp_anthropic');
+  localStorage.removeItem('gp_bdl');
+  closeModal('keys-modal');
+  alert('Keys cleared');
+}
+
+function openModal(id) {
+  const ak = getAnthropicKey();
+  const bk = getBdlKey();
+  if (ak) document.getElementById('anthropic-key-input').value = '••••' + ak.slice(-4);
+  if (bk) document.getElementById('bdl-key-input').value = '••••' + bk.slice(-4);
+  document.getElementById(id).classList.add('open');
+}
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function avatarColor(team) {
+  const c1 = (team||'??').charCodeAt(0)*47;
+  const c2 = ((team||'??').charCodeAt(1)||0)*23;
+  return `hsl(${(c1+c2)%360},35%,22%)`;
+}
+function initials(name) { return name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(); }
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function getWeekRange() {
+  const today = new Date();
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - ((today.getDay()+6)%7));
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  const fmt = d => d.toISOString().split('T')[0];
+  return { start: fmt(monday), end: fmt(sunday) };
+}
+
+function fmtDate(str) {
+  const d = new Date(str);
+  return d.toLocaleDateString('en-AU', { weekday:'short', month:'short', day:'numeric' });
+}
+
+// ── BDL API ───────────────────────────────────────────────────────────────────
+async function bdlFetch(path) {
+  const key = getBdlKey();
+  if (!key) throw new Error('No BallDontLie API key — tap 🔑 Keys to add one');
+  const res = await fetch(`https://api.balldontlie.io/v1/${path}`, {
+    headers: { 'Authorization': key }
+  });
+  if (!res.ok) throw new Error(`BDL API error: ${res.status}`);
+  return res.json();
+}
+
+async function findPlayerId(name) {
+  const data = await bdlFetch(`players?search=${encodeURIComponent(name)}&per_page=5`);
+  if (!data.data || data.data.length === 0) throw new Error(`Player not found: ${name}`);
+  // Prefer exact match
+  const exact = data.data.find(p => `${p.first_name} ${p.last_name}`.toLowerCase() === name.toLowerCase());
+  return exact || data.data[0];
+}
+
+async function getPlayerSeasonAvg(bdlId) {
+  try {
+    const data = await bdlFetch(`season_averages?season=${SEASON}&player_ids[]=${bdlId}`);
+    return data.data?.[0] || null;
+  } catch(e) { return null; }
+}
+
+async function getPlayerRecentForm(bdlId) {
+  try {
+    const data = await bdlFetch(`stats?player_ids[]=${bdlId}&seasons[]=${SEASON}&per_page=10`);
+    const games = data.data || [];
+    if (games.length === 0) return null;
+    const avg = f => games.reduce((s,g) => s + (g[f]||0), 0) / games.length;
+    return {
+      pts: avg('pts'), reb: avg('reb'), ast: avg('ast'),
+      stl: avg('stl'), blk: avg('blk'), turnover: avg('turnover'),
+      fg3m: avg('fg3m'), games: games.length
+    };
+  } catch(e) { return null; }
+}
+
+async function getTeamSchedule(teamId, startDate, endDate) {
+  try {
+    const data = await bdlFetch(`games?team_ids[]=${teamId}&start_date=${startDate}&end_date=${endDate}&per_page=10`);
+    return data.data || [];
+  } catch(e) { return []; }
+}
+
+async function getTeamDefRating(teamId) {
+  try {
+    // Use season stats to approximate def rating via opponent points allowed
+    const data = await bdlFetch(`teams/${teamId}`);
+    return data.data || null;
+  } catch(e) { return null; }
+}
+
+async function getLeagueDefRatings() {
+  // Hardcoded 2025-26 defensive ratings — updated preseason estimates
+  // Will be updated by live data when available
+  return {
+    1:115.2,2:108.2,3:117.2,4:116.0,5:114.0,6:112.0,7:110.2,8:111.4,
+    9:121.0,10:118.8,11:115.0,12:112.6,13:109.8,14:109.1,15:114.3,
+    16:116.4,17:113.1,18:119.2,19:113.5,20:110.9,21:118.4,22:118.0,
+    23:117.6,24:114.7,25:116.8,26:121.5,27:115.6,28:119.6,29:120.0,30:120.4
+  };
+}
+
+// ── LOAD WEEK ─────────────────────────────────────────────────────────────────
+async function loadWeek() {
+  if (!getBdlKey()) { openModal('keys-modal'); return; }
+  if (state.players.length === 0) { alert('Add players first'); return; }
+
+  state.weekLoading = true;
+  state.weekGames = {};
+  state.playerStats = {};
+  state.aiAnalysis = {};
+  renderWeekly();
+
+  const { start, end } = getWeekRange();
+  const defRatings = await getLeagueDefRatings();
+  const defSorted = Object.values(defRatings).sort((a,b)=>a-b);
+
+  for (const player of state.players) {
+    setWeekStatus(`Loading ${player.name}…`);
+    try {
+      // Find player in BDL
+      const bdlPlayer = await findPlayerId(player.name);
+      const bdlId = bdlPlayer.id;
+
+      // Get schedule for their team
+      const teamId = TEAM_IDS[player.team];
+      let games = [];
+      if (teamId) {
+        const rawGames = await getTeamSchedule(teamId, start, end);
+        const defRatingsList = defRatings;
+
+        games = rawGames.map((g, i) => {
+          const isHome = g.home_team.id === teamId;
+          const oppTeam = isHome ? g.visitor_team : g.home_team;
+          const oppId = oppTeam.id;
+          const oppAbbr = oppTeam.abbreviation;
+          const oppDefRtg = defRatingsList[oppId] || 116.0;
+          const oppRank = defSorted.findIndex(v => Math.abs(v - oppDefRtg) < 0.5) + 1;
+
+          // Detect B2B by checking if previous game was day before
+          const gameDate = new Date(g.date);
+          const prevGame = rawGames[i-1];
+          let isB2B = false;
+          if (prevGame) {
+            const prevDate = new Date(prevGame.date);
+            const diff = (gameDate - prevDate) / (1000*60*60*24);
+            if (diff <= 1) isB2B = true;
+          }
+
+          return {
+            date: g.date,
+            opponent: oppAbbr,
+            oppFullName: oppTeam.full_name,
+            isHome,
+            isB2B,
+            oppDefRtg,
+            oppRank,
+            gameId: g.id,
+            status: g.status
+          };
+        });
+      }
+
+      // Get season averages
+      const seasonAvg = await getPlayerSeasonAvg(bdlId);
+
+      // Get recent form (last 10)
+      const recentForm = await getPlayerRecentForm(bdlId);
+
+      state.weekGames[player.id] = games;
+      state.playerStats[player.id] = { seasonAvg, recentForm, bdlId };
+
+    } catch(e) {
+      state.weekGames[player.id] = [];
+      state.playerStats[player.id] = { error: e.message };
+    }
+  }
+
+  state.weekLoading = false;
+  saveState();
+  setWeekStatus('');
+  renderWeekly();
+}
+
+function setWeekStatus(msg) {
+  const el = document.getElementById('week-status');
+  if (msg) {
+    el.innerHTML = `<div class="loading-bar"><div class="spinner"></div><span>${esc(msg)}</span></div>`;
+  } else {
+    el.innerHTML = '';
+  }
+}
+
+// ── AI ANALYSIS ───────────────────────────────────────────────────────────────
+async function analysePlayer(playerId) {
+  const player = state.players.find(p => p.id === playerId);
+  const games = state.weekGames[playerId];
+  const stats = state.playerStats[playerId];
+  if (!player || !games || games.length === 0) return;
+
+  const apiKey = getAnthropicKey();
+  if (!apiKey) { openModal('keys-modal'); return; }
+
+  state.aiLoading[playerId] = true;
+  renderWeekly();
+
+  // Build stats context
+  const sa = stats?.seasonAvg;
+  const rf = stats?.recentForm;
+
+  const statsContext = sa ? `
+Season averages (${SEASON}-${SEASON+1}): ${sa.pts?.toFixed(1)} PTS, ${sa.reb?.toFixed(1)} REB, ${sa.ast?.toFixed(1)} AST, ${sa.stl?.toFixed(1)} STL, ${sa.blk?.toFixed(1)} BLK, ${sa.turnover?.toFixed(1)} TO, ${sa.fg3m?.toFixed(1)} 3PM per game.` : '';
+
+  const formContext = rf ? `
+Last ${rf.games} games form: ${rf.pts?.toFixed(1)} PTS, ${rf.reb?.toFixed(1)} REB, ${rf.ast?.toFixed(1)} AST, ${rf.stl?.toFixed(1)} STL, ${rf.blk?.toFixed(1)} BLK, ${rf.turnover?.toFixed(1)} TO, ${rf.fg3m?.toFixed(1)} 3PM per game.` : '';
+
+  const prompt = `You are an elite fantasy basketball analyst. Recommend which single game to target for maximum fantasy points in a single-game pick format (pick ONE game per week for this player).
+
+PLAYER: ${player.name} | Team: ${player.team} | Position: ${player.position}
+${statsContext}
+${formContext}
+
+SCORING SYSTEM: ${SCORING_DESC}
+
+GAMES THIS WEEK:
+${games.map((g,i) => `Game ${i+1} (${g.date}): ${g.isHome?'HOME':'AWAY'} vs ${g.oppFullName||g.opponent} | Opponent Def Rating: ${g.oppDefRtg.toFixed(1)} (Rank ${g.oppRank}/30 — lower = better defense) | ${g.isB2B?'⚠️ BACK-TO-BACK (significant fatigue risk)':'Normal rest'} | Game status: ${g.status||'Scheduled'}`).join('\n')}
+
+Key factors to weigh:
+1. Opponent defensive rating (higher = weaker defense = more fantasy points)
+2. Home advantage (~2-3 point boost in scoring)
+3. Back-to-back fatigue (minutes restriction risk, reduced effort)
+4. Player's recent form vs season average — is he hot or cold?
+5. Double-double/triple-double potential (massive bonus in this scoring system)
+6. STL and BLK opportunities vs this opponent style
+
+Respond ONLY with raw JSON — no markdown, no backticks, no explanation:
+{"pick":1,"confidence":"High","headline":"One punchy sentence why","pros":["a","b","c"],"cons":["x"],"projectedRange":"28–38 pts","avoid":2,"avoidReason":"why"}`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 600,
+        system: 'You are a fantasy basketball analyst. Respond ONLY with a single valid JSON object. No markdown, no backticks, no explanation.',
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    const text = data.content?.find(b=>b.type==='text')?.text || '{}';
+    state.aiAnalysis[playerId] = JSON.parse(text.replace(/```json|```/g,'').trim());
+  } catch(e) {
+    state.aiAnalysis[playerId] = { error: e.message };
+  }
+  state.aiLoading[playerId] = false;
+  renderWeekly();
+}
+
+async function analyseAll() {
+  for (const p of state.players) {
+    if ((state.weekGames[p.id]||[]).length > 0) {
+      await analysePlayer(p.id);
+    }
+  }
+}
+
+// ── PLAYER ACTIONS ────────────────────────────────────────────────────────────
+function addPlayer() {
+  const name = document.getElementById('input-name').value.trim();
+  const team = document.getElementById('input-team').value.trim().toUpperCase();
+  const pos = document.getElementById('input-pos').value.trim() || '?';
+  const err = document.getElementById('form-error');
+  err.textContent = '';
+  if (!name) return err.textContent = '⚠ Name required';
+  if (!team || team.length > 3) return err.textContent = '⚠ 3-letter team code required (e.g. SAS)';
+  if (state.players.length >= 10) return err.textContent = '⚠ Roster full — remove a player first';
+  if (state.players.find(p => p.name.toLowerCase() === name.toLowerCase())) return err.textContent = '⚠ Already on roster';
+  state.players.push({ id: Date.now().toString(), name, team, position: pos, status: 'active' });
+  saveState(); renderAll();
+  document.getElementById('input-name').value = '';
+  document.getElementById('input-team').value = '';
+  document.getElementById('input-pos').value = '';
+  document.getElementById('input-name').focus();
+}
+
+function removePlayer(id) {
+  state.players = state.players.filter(p => p.id !== id);
+  delete state.weekGames[id];
+  delete state.playerStats[id];
+  delete state.picks[id];
+  delete state.aiAnalysis[id];
+  saveState(); renderAll();
+}
+
+async function lockPick(playerId, gameIdx) {
+  state.picks[playerId] = { gameIndex: gameIdx, lockedAt: new Date().toISOString() };
+  saveState(); renderWeekly();
+}
+
+async function archiveWeek() {
+  const { start, end } = getWeekRange();
+  const weekPicks = state.players.map(p => {
+    const pick = state.picks[p.id];
+    const game = pick != null ? (state.weekGames[p.id]||[])[pick.gameIndex] : null;
+    const ai = state.aiAnalysis[p.id];
+    const stats = state.playerStats[p.id];
+    const sa = stats?.seasonAvg;
+    return {
+      player: p.name, team: p.team,
+      game: game ? `${game.isHome?'vs':'@'} ${game.opponent} (${fmtDate(game.date)})` : 'No pick',
+      projected: ai?.projectedRange || '—',
+      confidence: ai?.confidence || '—',
+      seasonAvg: sa ? `${sa.pts?.toFixed(1)}/${sa.reb?.toFixed(1)}/${sa.ast?.toFixed(1)}` : '—'
+    };
+  });
+  const entry = { week: `${start} — ${end}`, picks: weekPicks, savedAt: new Date().toISOString() };
+  state.history.unshift(entry);
+  saveState(); renderHistory();
+  alert(`Week archived! ${state.players.filter(p=>state.picks[p.id]!=null).length}/${state.players.length} picks locked.`);
+}
+
+// ── EXPORT / IMPORT ───────────────────────────────────────────────────────────
+function exportData() {
+  const json = JSON.stringify({
+    players: state.players, picks: state.picks,
+    history: state.history, weekGames: state.weekGames,
+    playerStats: state.playerStats, exportedAt: new Date().toISOString()
+  }, null, 2);
+  const uri = 'data:application/json;charset=utf-8,' + encodeURIComponent(json);
+  const a = document.createElement('a');
+  a.href = uri; a.download = 'gamepicker-roster.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+function importData(e) {
+  const file = e.target.files?.[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const d = JSON.parse(ev.target.result);
+      if (d.players) state.players = d.players;
+      if (d.picks) state.picks = d.picks;
+      if (d.history) state.history = d.history;
+      if (d.weekGames) state.weekGames = d.weekGames;
+      if (d.playerStats) state.playerStats = d.playerStats;
+      state.aiAnalysis = {}; state.aiLoading = {};
+      saveState(); renderAll();
+      alert('Imported!');
+    } catch(err) { alert('Import failed — make sure it\'s a valid gamepicker JSON file.'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function switchView(view) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('view-'+view).classList.add('active');
+  document.querySelector(`[data-view="${view}"]`).classList.add('active');
+}
+
+function renderAll() {
+  renderRoster();
+  renderWeekly();
+  renderHistory();
+  document.getElementById('roster-count').textContent = state.players.length;
+}
+
+function renderRoster() {
+  const list = document.getElementById('player-list');
+  if (state.players.length === 0) {
+    list.innerHTML = `<div class="empty"><div class="empty-icon">🏀</div><div class="empty-main">Add your 10 starters above</div></div>`;
+  } else {
+    list.innerHTML = state.players.map(p => `
+      <div class="player-row">
+        <div class="player-info">
+          <div class="avatar" style="background:${avatarColor(p.team)}">${initials(p.name)}</div>
+          <div>
+            <div class="player-name">${esc(p.name)}</div>
+            <div class="player-meta">${esc(p.team)} · ${esc(p.position)}</div>
+          </div>
+        </div>
+        <button class="remove-btn" onclick="removePlayer('${p.id}')">×</button>
+      </div>`).join('');
+  }
+  const sg = document.getElementById('scoring-grid');
+  sg.innerHTML = SCORING_DISPLAY.map(([k,v]) =>
+    `<span class="score-item"><span class="score-key">${k}</span> <span class="${v>1?'score-val-hi':v<0?'score-val-neg':'score-val-mid'}">${v>0?'+':''}${v}</span></span>`
+  ).join('');
+}
+
+function renderWeekly() {
+  const hasGames = state.players.some(p => (state.weekGames[p.id]||[]).length > 0);
+  const hasPicks = Object.keys(state.picks).length > 0;
+  document.getElementById('btn-analyse-all').style.display = hasGames ? 'inline-block' : 'none';
+  document.getElementById('btn-archive').style.display = hasPicks ? 'inline-block' : 'none';
+
+  const container = document.getElementById('player-week-list');
+
+  if (state.players.length === 0) {
+    container.innerHTML = `<div class="empty"><div class="empty-main">Add players in the Roster tab first</div></div>`;
+    return;
+  }
+
+  if (state.weekLoading) {
+    container.innerHTML = '';
+    return;
+  }
+
+  if (!hasGames && Object.keys(state.weekGames).length === 0) {
+    container.innerHTML = `<div class="empty"><div class="empty-main">Tap Load This Week to fetch live schedules & stats</div></div>`;
+    return;
+  }
+
+  container.innerHTML = state.players.map(player => {
+    const games = state.weekGames[player.id] || [];
+    const stats = state.playerStats[player.id] || {};
+    const ai = state.aiAnalysis[player.id];
+    const isLoading = state.aiLoading[player.id];
+    const pick = state.picks[player.id];
+    const sa = stats.seasonAvg;
+    const rf = stats.recentForm;
+
+    const gamesHtml = games.length === 0 ?
+      `<div style="font-size:12px;color:#4b5563;padding:8px 0">${esc(stats.error || 'No games found this week — bye week or off-season')}</div>` :
+      games.map((game, i) => {
+        const isRec = ai?.pick === i+1;
+        const isAvoid = ai?.avoid === i+1;
+        const isPicked = pick?.gameIndex === i;
+        const defClass = game.oppDefRtg > 117 ? 'def-good' : game.oppDefRtg > 113 ? 'def-mid' : 'def-bad';
+        const rowClass = isPicked ? 'picked' : isRec ? 'recommended' : isAvoid ? 'avoided' : '';
+        const idxClass = isRec ? 'rec' : isAvoid ? 'avoid' : '';
+        return `
+          <div class="game-row ${rowClass}" onclick="lockPick('${player.id}',${i})">
+            <div style="display:flex;align-items:center;gap:9px;flex:1;min-width:0">
+              <div class="game-index ${idxClass}">G${i+1}</div>
+              <div style="min-width:0">
+                <div class="game-main">${game.isHome?'vs':'@'} ${esc(game.opponent)}${game.isB2B?'<span class="b2b-tag">B2B</span>':''}</div>
+                <div class="game-sub">${fmtDate(game.date)} · ${game.isHome?'Home':'Away'}</div>
+              </div>
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+              <div style="font-size:12px;font-weight:600" class="${defClass}">DEF #${game.oppRank}</div>
+              <div style="font-size:10px;color:#374151">${game.oppDefRtg.toFixed(1)}</div>
+            </div>
+            ${isPicked ? '<span style="font-size:14px">🔒</span>' : ''}
+          </div>`;
+      }).join('');
+
+    // Stats section
+    let statsHtml = '';
+    if (sa || rf) {
+      const statRow = (label, saVal, rfVal) => {
+        if (saVal == null && rfVal == null) return '';
+        const hot = rfVal != null && saVal != null && rfVal > saVal * 1.1;
+        return `<span class="stat-item"><span class="stat-key">${label} </span><span class="${hot?'stat-val-hot':'stat-val'}">${rfVal!=null?rfVal.toFixed(1):saVal.toFixed(1)}</span></span>`;
+      };
+      statsHtml = `
+        <div class="player-card-stats">
+          <div style="width:100%;font-size:10px;color:#374151;margin-bottom:2px">${rf?`Last ${rf.games} games`:'Season avg'}</div>
+          ${statRow('PTS', sa?.pts, rf?.pts)}
+          ${statRow('REB', sa?.reb, rf?.reb)}
+          ${statRow('AST', sa?.ast, rf?.ast)}
+          ${statRow('STL', sa?.stl, rf?.stl)}
+          ${statRow('BLK', sa?.blk, rf?.blk)}
+          ${statRow('3PM', sa?.fg3m, rf?.fg3m)}
+          ${statRow('TO', sa?.turnover, rf?.turnover)}
+        </div>`;
+    }
+
+    const aiHtml = ai && !ai.error ? `
+      <div class="player-card-ai">
+        <div style="display:flex;gap:6px;align-items:flex-start">
+          <span class="ai-badge">AI · ${esc(ai.confidence)}</span>
+          <span class="ai-headline" style="margin-left:6px">${esc(ai.headline||'')}</span>
+        </div>
+        <div class="ai-tags">
+          ${(ai.pros||[]).map(p=>`<span class="tag-pro">✓ ${esc(p)}</span>`).join('')}
+          ${(ai.cons||[]).map(c=>`<span class="tag-con">✗ ${esc(c)}</span>`).join('')}
+        </div>
+        ${ai.avoidReason ? `<div class="ai-avoid">⛔ Avoid G${ai.avoid}: ${esc(ai.avoidReason)}</div>` : ''}
+      </div>` : ai?.error ? `<div class="ai-error">⚠ ${esc(ai.error)}</div>` : '';
+
+    return `
+      <div class="player-card">
+        <div class="player-card-header">
+          <div class="player-info">
+            <div class="avatar" style="background:${avatarColor(player.team)}">${initials(player.name)}</div>
+            <div>
+              <div class="player-name">${esc(player.name)}</div>
+              <div class="player-meta">${esc(player.team)} · ${esc(player.position)}</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center">
+            ${ai?.projectedRange && !ai.error ? `<span class="proj-range">${esc(ai.projectedRange)}</span>` : ''}
+            <button class="btn btn-sm btn-purple" onclick="analysePlayer('${player.id}')" ${isLoading?'disabled':''} style="opacity:${isLoading?0.5:1}">
+              ${isLoading ? '…' : '🤖'}
+            </button>
+          </div>
+        </div>
+        <div class="player-card-body">${gamesHtml}</div>
+        ${statsHtml}
+        ${aiHtml}
+      </div>`;
+  }).join('');
+}
+
+function renderHistory() {
+  const list = document.getElementById('history-list');
+  const empty = document.getElementById('history-empty');
+  if (state.history.length === 0) {
+    empty.style.display = 'block'; list.innerHTML = ''; return;
+  }
+  empty.style.display = 'none';
+  list.innerHTML = state.history.map(week => `
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:12px 14px;border-bottom:1px solid #2e3650;display:flex;justify-content:space-between">
+        <span style="font-weight:600;font-size:13px">${esc(week.week)}</span>
+        <span style="font-size:11px;color:#374151">${new Date(week.savedAt).toLocaleDateString('en-AU')}</span>
+      </div>
+      <div style="padding:12px 14px;overflow-x:auto">
+        <table class="hist-table">
+          <thead><tr>
+            <th class="hist-th">Player</th>
+            <th class="hist-th">Game</th>
+            <th class="hist-th">Avg</th>
+            <th class="hist-th">Proj</th>
+            <th class="hist-th">Conf</th>
+          </tr></thead>
+          <tbody>
+            ${week.picks.map(p => `
+              <tr>
+                <td class="hist-td hist-player">${esc(p.player)}</td>
+                <td class="hist-td hist-game">${esc(p.game)}</td>
+                <td class="hist-td" style="font-size:11px;color:#6b7280">${esc(p.seasonAvg||'—')}</td>
+                <td class="hist-td hist-proj">${esc(p.projected)}</td>
+                <td class="hist-td ${p.confidence==='High'?'hist-conf-high':p.confidence==='Medium'?'hist-conf-mid':'hist-conf-low'}">${esc(p.confidence)}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`).join('');
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+loadState();
+renderAll();
+</script>
+</body>
+</html>
